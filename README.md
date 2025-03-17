@@ -19,7 +19,7 @@ Ensure you have Python installed along with NumPy and Matplotlib:
 
 # SGDandFGD.py
 
-This repository contains a comparison of **Full Gradient Descent (GD)** and **Stochastic Gradient Descent (SGD)** for optimizing a linear regression model.
+Comparison of **Full Gradient Descent (GD)** and **Stochastic Gradient Descent (SGD)** for optimizing a linear regression model.
 
 ## 📝 Description
 - **Data**: 100 samples, 10 features (`x ∈ [0,1]^{10}`)
