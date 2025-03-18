@@ -2,100 +2,66 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 
-# Rastgelelik için seed ayarlanıyor.
-np.random.seed(42)
+def generate_data(n_samples=100, n_features=10):
+    np.random.seed(42)  # For reproducibility
+    X = np.random.uniform(0, 1, (n_samples, n_features))  # X in range [0,1]
+    noise = 0.1 * np.random.normal(0, 1, n_samples)  # Gaussian noise
+    y = np.sum([(i + 1) * X[:, i] for i in range(n_features)], axis=0) + noise
+    return X, y
 
-# 100 adet 10 boyutlu veri üretimi: x ∈ [0,1]^{10}
-n_samples, n_features = 100, 10
-X = np.random.uniform(0, 1, (n_samples, n_features))
-
-# Gerçek katsayılar: [1, 2, ..., 10]
-true_w = np.arange(1, n_features + 1)
-
-# gürültülü çıktı üretimi: y = sum(i*x_i) + 0.1 * N(0,1)
-noise = 0.1 * np.random.randn(n_samples)
-y = X.dot(true_w) + noise
-
-# Kayıp fonksiyonu (ortalama kare hata)
-def compute_loss(w, X, y):
-    pred = X.dot(w)
-    return np.mean((pred - y)**2)
-
-# Gradient hesaplama (tam veri kümesi için)
-def compute_grad(w, X, y):
-    pred = X.dot(w)
-    grad = 2 * X.T.dot(pred - y) / X.shape[0]
-    return grad
-
-# Full Gradient Descent
-def gradient_descent(X, y, lr=0.05, epoch=10):
-    
-    '''
-    Gradient Descent for a single feature
-    '''
-    
-    m, b = 0.33, 0.48 # parameters
-    log, mse = [], [] # lists to store learning process
-    N = len(X) # number of samples
+def gradient_descent(X, y, lr=0.05, epoch=100):
+    m = np.zeros(X.shape[1])  # Initial parameters
+    b = 0
+    log, mse = [], []
+    N = len(X)
     
     for _ in range(epoch):
-                
-        f = y - (m*X + b)
-    
-        # Updating m and b
-        m -= lr * (-2 * X.dot(f).sum() / N)
-        b -= lr * (-2 * f.sum() / N)
+        f = y - (X.dot(m) + b)
+        m -= lr * (-2 * X.T.dot(f) / N)
+        b -= lr * (-2 * np.sum(f) / N)
         
-        log.append((m, b))
-        mse.append(mean_squared_error(y, (m*X + b)))        
+        log.append((m.copy(), b))
+        mse.append(mean_squared_error(y, X.dot(m) + b))
     
     return m, b, log, mse
 
-# Stochastic Gradient Descent
-def SGD(X, y, lr=0.05, epoch=10, batch_size=1):
-        
-    '''
-    Stochastic Gradient Descent for a single feature
-    '''
-    
-    m, b = 0.33, 0.48 # initial parameters
-    log, mse = [], [] # lists to store learning process
+def SGD(X, y, lr=0.05, epoch=100, batch_size=1):
+    m = np.zeros(X.shape[1])  # Initial parameters
+    b = 0
+    log, mse = [], []
     
     for _ in range(epoch):
-        
-        indexes = np.random.randint(0, len(X), batch_size) # random sample
-        
-        Xs = np.take(X, indexes)
-        ys = np.take(y, indexes)
+        indexes = np.random.randint(0, len(X), batch_size)
+        Xs, ys = X[indexes], y[indexes]
         N = len(Xs)
         
-        f = ys - (m*Xs + b)
+        f = ys - (Xs.dot(m) + b)
+        m -= lr * (-2 * Xs.T.dot(f) / N)
+        b -= lr * (-2 * np.sum(f) / N)
         
-        # Updating parameters m and b
-        m -= lr * (-2 * Xs.dot(f).sum() / N)
-        b -= lr * (-2 * f.sum() / N)
-        
-        log.append((m, b))
-        mse.append(mean_squared_error(y, m*X+b))        
+        log.append((m.copy(), b))
+        mse.append(mean_squared_error(y, X.dot(m) + b))
     
     return m, b, log, mse
 
-# Full GD ile optimizasyon
-w_full, loss_full = full_gradient_descent(X, y, lr=0.05, n_iter=10)
-print("Full Gradient Descent sonucu (w):", w_full)
-print("Gerçek katsayılar:", true_w)
+# Generate data
+X, y = generate_data()
 
-# SGD ile optimizasyon
-w_sgd, loss_sgd = stochastic_gradient_descent(X, y, lr=0.055, n_iter=10)
-print("Stochastic Gradient Descent sonucu (w):", w_sgd)
-print("Gerçek katsayılar:", true_w)
+# Run Gradient Descent
+m_gd, b_gd, log_gd, mse_gd = gradient_descent(X, y)
 
-# Kayıp değerlerinin görselleştirilmesi
-plt.figure(figsize=(10,4))
-plt.plot(loss_full, label="Full GD")
-plt.plot(loss_sgd, label="SGD", alpha=0.7)
-plt.xlabel("Iteration")
-plt.ylabel("MSE Loss")
+# Run Stochastic Gradient Descent
+m_sgd, b_sgd, log_sgd, mse_sgd = SGD(X, y)
+
+# Plot MSE comparison
+plt.plot(mse_gd, label='GD MSE')
+plt.plot(mse_sgd, label='SGD MSE')
+plt.xlabel('Epochs')
+plt.ylabel('Mean Squared Error')
 plt.legend()
-plt.title("Gradient Descent vs Stochastic Gradient Descent")
+plt.title('MSE Progression for GD vs. SGD')
 plt.show()
+
+# Print final results
+print("Final GD Coefficients:", m_gd, "Intercept:", b_gd)
+print("Final SGD Coefficients:", m_sgd, "Intercept:", b_sgd)
